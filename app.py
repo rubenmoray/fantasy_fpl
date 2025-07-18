@@ -5,6 +5,8 @@ import requests
 import plotly.express as px
 import os
 import datetime
+import plotly.graph_objects as go
+
 
 st.set_page_config(page_title="FPL Fantasy Tracker", layout="wide")
 st.title("📊 FPL Fantasy Tracker 2025/26")
