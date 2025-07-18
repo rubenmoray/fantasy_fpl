@@ -140,25 +140,22 @@ import plotly.graph_objects as go
 import plotly.graph_objects as go
 
 # ==== TAB 4: Comparison by Category ====
+import plotly.graph_objects as go  # asegúrate de importarlo arriba
+
+# ==== TAB 4: Comparison by Category ====
 with tab4:
     if has_access:
         st.subheader("⚔️ Compare Players by Category (Radar Charts)")
 
         categories = {
-            "Attack": ["Points/Game", "expected_goals_per_90",
-                       "expected_assists_per_90", "expected_goal_involvements_per_90", "threat_rank"],
+            "Attack": ["Points/Game", "expected_goals_per_90", "expected_assists_per_90", "expected_goal_involvements_per_90", "threat_rank"],
             "Creativity": ["creativity_rank", "influence_rank", "ict_index_rank"],
             "Consistency": ["value_season", "form", "points_per_game_rank"],
             "Defense/Goalie": ["clean_sheets_per_90", "saves_per_90", "expected_goals_conceded_per_90"],
             "Participation": ["minutes", "starts_per_90", "% Selected"],
-            "Set Pieces": [
-                "corners_and_indirect_freekicks_order",
-                "direct_freekicks_order",
-                "penalties_order"
-            ],
+            "Set Pieces": ["corners_and_indirect_freekicks_order", "direct_freekicks_order", "penalties_order"],
         }
 
-        # MULTISELECT CORREGIDO
         selected_players = st.multiselect(
             label="Select players to compare",
             options=list(df["Player"].dropna().unique()),
@@ -182,17 +179,22 @@ with tab4:
                 norm = (compare_df - compare_df.min()) / (compare_df.max() - compare_df.min() + 1e-6)
 
                 fig = go.Figure()
-                for player in norm.index:
+                for player in selected_players:  # agregado para iterar siempre en el orden del usuario
+                    if player not in norm.index:
+                        continue
                     fig.add_trace(go.Scatterpolar(
                         r=norm.loc[player].values,
                         theta=valid,
                         fill='toself',
                         name=player,
-                        opacity=0.6
+                        opacity=0.6,
+                        visible=True,     # asegura que la traza se muestre
+                        showlegend=True   # legend visible incluso si era una sola
                     ))
+
                 fig.update_layout(
                     showlegend=True,
-                    polar=dict(radialaxis=dict(visible=True, range=[0, 1]))
+                    polar=dict(radialaxis=dict(visible=True, range=[0,1]))
                 )
                 st.markdown(f"### 📌 {cat_name}")
                 st.plotly_chart(fig, use_container_width=True)
@@ -211,6 +213,7 @@ with tab4:
             "👉 [Buy your access code on Gumroad]"
             "(https://moray5.gumroad.com/l/rejrzq?wanted=true)"
         )
+
 
 
 # ==== TAB 5 ====
