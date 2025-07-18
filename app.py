@@ -133,10 +133,12 @@ with tab3:
         st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
 
 # ==== TAB 4 ====
+# ==== TAB 4: Comparison by Category ====
 with tab4:
     if has_access:
         st.subheader("⚔️ Compare Players by Category (Radar Charts)")
 
+        # Define categorías y sus métricas
         categories = {
             "Attack": ["Points/Game", "expected_goals_per_90",
                        "expected_assists_per_90", "expected_goal_involvements_per_90", "threat_rank"],
@@ -148,26 +150,35 @@ with tab4:
                            "direct_freekicks_order", "penalties_order"]
         }
 
-        players = st.multiselect("Select players to compare", df["Player"].dropna().unique(),
-                                 default=df["Player"].dropna().unique()[:2])
-        if len(players) < 2:
+        # Selección de jugadores
+        selected_players = st.multiselect(
+            "Select players to compare",
+            df["Player"].dropna().unique(),
+            default=df["Player"].dropna().unique()[:2]
+        )
+
+        if len(selected_players) < 2:
             st.info("Select at least 2 players to compare.")
         else:
-            for cat, metrics in categories.items():
-                valid = [m for m in metrics if m in df.columns]
-                if len(valid) < 2:
+            for cat_name, metrics in categories.items():
+                # Filtrar métricas válidas
+                valid_metrics = [m for m in metrics if m in df.columns]
+                if len(valid_metrics) < 2:
                     continue
 
-                st.markdown(f"### 📌 {cat}")
-                d = df[df["Player"].isin(players)][["Player"] + valid].dropna()
-                d.set_index("Player", inplace=True)
-                nz = d.loc[:, (d != 0).sum() > 0]
-                if nz.shape[1] < 2:
+                st.markdown(f"### 📌 {cat_name}")
+                compare_df = df[df["Player"].isin(selected_players)][["Player"] + valid_metrics].dropna()
+                compare_df.set_index("Player", inplace=True)
+
+                non_zero = compare_df.loc[:, (compare_df != 0).sum() > 0]
+                if non_zero.shape[1] < 2:
                     st.caption("Not enough data in this category.")
                     continue
 
-                norm = (nz - nz.min()) / (nz.max() - nz.min())
-                melted = norm.reset_index().melt(id_vars="Player", var_name="Metric", value_name="Value")
+                norm = (non_zero - non_zero.min()) / (non_zero.max() - non_zero.min())
+                melted = norm.reset_index().melt(
+                    id_vars="Player", var_name="Metric", value_name="Value"
+                )
 
                 fig = px.line_polar(
                     melted,
@@ -181,16 +192,22 @@ with tab4:
                 fig.update_layout(showlegend=True)
                 st.plotly_chart(fig, use_container_width=True)
 
-            st.download_button("📥 Download all selected comparison data",
-                               data=df[df["Player"].isin(players)][["Player"] + sum(categories.values(), [])]
-                               .reset_index(drop=True).to_csv(index=False).encode('utf-8'),
-                               file_name="player_comparison_full.csv", mime='text/csv')
+            # Botón descargas
+            all_metrics = sum(categories.values(), [])
+            st.download_button(
+                label="📥 Download all selected comparison data",
+                data=df[df["Player"].isin(selected_players)][["Player"] + all_metrics]
+                     .reset_index(drop=True).to_csv(index=False).encode('utf-8'),
+                file_name="player_comparison_full.csv",
+                mime="text/csv"
+            )
     else:
         st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
         st.markdown(
             "👉 [Buy your access code on Gumroad]"
             "(https://moray5.gumroad.com/l/rejrzq?wanted=true)"
         )
+
 
 # ==== TAB 5 ====
 with tab5:
