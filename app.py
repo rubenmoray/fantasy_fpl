@@ -112,11 +112,16 @@ with tab2:
     st.download_button("📥 Download Top Picks CSV", data=top_df.to_csv(index=False).encode('utf-8'), file_name='top_10_points_per_million.csv', mime='text/csv')
 
 # ==== TAB 3 ====
+# ==== TAB 3: Performance ====
 with tab3:
     if has_access:
-        st.subheader("📈 Gameweek Performance")
-        player_name = st.selectbox("Choose a player", df["Player"].unique())
-        player_id = df[df["Player"] == player_name]["Player ID"].values[0]
+        st.subheader("📈 Gameweek Performance Comparison")
+
+        selected_names = st.multiselect(
+            "Select players to compare", 
+            sorted(df["Player"].dropna().unique()), 
+            default=sorted(df["Player"].dropna().unique())[:2]
+        )
 
         @st.cache_data
         def get_history(player_id):
@@ -124,12 +129,32 @@ with tab3:
             res = requests.get(url)
             return pd.DataFrame(res.json()["history"]) if res.status_code == 200 else pd.DataFrame()
 
-        history_df = get_history(player_id)
-        if not history_df.empty:
-            fig = px.line(history_df, x="round", y="total_points", title=f"{player_name} - Points per Gameweek")
-            st.plotly_chart(fig)
+        if len(selected_names) < 1:
+            st.info("Please select at least one player.")
         else:
-            st.info("No gameweek data yet.")
+            all_histories = []
+            for name in selected_names:
+                player_id = df[df["Player"] == name]["Player ID"].values[0]
+                history = get_history(player_id)
+                if not history.empty:
+                    history["Player"] = name
+                    all_histories.append(history)
+
+            if all_histories:
+                combined = pd.concat(all_histories)
+                fig = px.line(
+                    combined, 
+                    x="round", 
+                    y="total_points", 
+                    color="Player",
+                    markers=True,
+                    title="Points per Gameweek"
+                )
+                fig.update_layout(xaxis_title="Gameweek", yaxis_title="Points")
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No gameweek data available yet.")
+
     else:
         st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
         st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
