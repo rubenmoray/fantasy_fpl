@@ -157,4 +157,4 @@ with tab5:
             st.info("Set piece data not available yet.")
     else:
         st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
-        st.markdown("👉 [Buy your access code on Gumroad](https://youruser.gumroad.com/l/fpl-premium-access)")
+        st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
