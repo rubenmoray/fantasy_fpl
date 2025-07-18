@@ -135,77 +135,62 @@ with tab3:
 # ==== TAB 4 ====
 with tab4:
     if has_access:
-        st.subheader("⚔️ Compare Players (Radar Chart)")
+        st.subheader("⚔️ Compare Players by Category (Radar Charts)")
 
-        # Opciones dinámicas de métricas disponibles
-        possible_metrics = [
-            ("Points/Game", "Points/Game"),
-            ("Points per Million", "Points per Million"),
-            ("Price (£m)", "Price (£m)"),
-            ("form", "form"),
-            ("value_season", "value_season"),
-            ("expected_goals_per_90", "expected_goals_per_90"),
-            ("expected_assists_per_90", "expected_assists_per_90")
-        ]
+        categories = {
+            "Attack": ["Points/Game", "expected_goals_per_90",
+                       "expected_assists_per_90", "expected_goal_involvements_per_90", "threat_rank"],
+            "Creativity": ["creativity_rank", "influence_rank", "ict_index_rank"],
+            "Consistency": ["value_season", "form", "points_per_game_rank"],
+            "Defense/Goalie": ["clean_sheets_per_90", "saves_per_90", "expected_goals_conceded_per_90"],
+            "Participation": ["minutes", "starts_per_90", "% Selected"],
+            "Set Pieces": ["corners_and_indirect_freekicks_order", "direct_freekicks_order", "penalties_order"]
+        }
 
-        # Selección de métricas y jugadores
-        selected_metrics = st.multiselect(
-            "Select metrics to compare",
-            options=[label for label, _ in possible_metrics],
-            default=[label for label, var in possible_metrics if label in ["Points/Game", "Points per Million", "form"]]
-        )
         player_options = df["Player"].dropna().unique()
         selected_players = st.multiselect("Select players to compare", player_options, default=player_options[:2])
-
-        # Validaciones
         if len(selected_players) < 2:
             st.info("Select at least 2 players to compare.")
-        elif len(selected_metrics) < 2:
-            st.info("Select at least 2 metrics for a meaningful radar chart.")
         else:
-            # Mapear métricas seleccionadas a variables del DataFrame
-            radar_metrics = [var for label, var in possible_metrics if label in selected_metrics]
-            compare_df = df[df["Player"].isin(selected_players)][["Player"] + radar_metrics].copy()
-            compare_df.dropna(subset=radar_metrics, inplace=True)
-            compare_df.set_index("Player", inplace=True)
+            for cat_name, metrics in categories.items():
+                valid_metrics = [m for m in metrics if m in df.columns]
+                if len(valid_metrics) < 2:
+                    continue  # omitimos categorías sin suficientes métricas
 
-            if compare_df.empty:
-                st.warning("Selected players have missing data for the chosen metrics.")
-            else:
-                # Eliminar columnas con todos ceros
-                non_zero_cols = compare_df.loc[:, (compare_df != 0).sum() > 0]
-                if non_zero_cols.shape[1] < 2:
-                    st.warning("Not enough valid metrics after filtering zeros.")
-                else:
-                    # Normalizar
-                    normalized = (non_zero_cols - non_zero_cols.min()) / (non_zero_cols.max() - non_zero_cols.min())
-                    melted = normalized.reset_index().melt(id_vars="Player", var_name="Metric", value_name="Value")
+                st.markdown(f"### 📌 {cat_name}")
+                compare_df = df[df["Player"].isin(selected_players)][["Player"] + valid_metrics].dropna()
+                compare_df.set_index("Player", inplace=True)
+                non_zero = compare_df.loc[:, (compare_df != 0).sum() > 0]
+                if non_zero.shape[1] < 2:
+                    st.caption("Not enough data in this category.")
+                    continue
 
-                    fig = px.line_polar(
-                        melted,
-                        r="Value",
-                        theta="Metric",
-                        color="Player",
-                        line_close=True,
-                        title="🔄 Player Radar Comparison"
-                    )
-                    fig.update_traces(fill='toself', opacity=0.6)
-                    fig.update_layout(legend_title_text='Player')
-                    st.plotly_chart(fig, use_container_width=True)
+                norm = (non_zero - non_zero.min()) / (non_zero.max() - non_zero.min())
+                melted = norm.reset_index().melt(id_vars="Player", var_name="Metric", value_name="Value")
 
-                    st.download_button(
-                        label="📥 Download Comparison Data (Normalized)",
-                        data=normalized.reset_index().to_csv(index=False).encode('utf-8'),
-                        file_name="player_radar_comparison.csv",
-                        mime="text/csv"
-                    )
+                fig = px.line_polar(
+                    melted,
+                    r="Value",
+                    theta="Metric",
+                    color="Player",
+                    line_close=True,
+                    title=None
+                )
+                fig.update_traces(fill='toself', opacity=0.4)
+                fig.update_layout(showlegend=True)
+                st.plotly_chart(fig, use_container_width=True)
+
+            st.download_button(
+                label="📥 Download all selected comparison data",
+                data=df[df["Player"].isin(selected_players)][["Player"] + sum(categories.values(), [])]
+                      .reset_index(drop=True).to_csv(index=False).encode('utf-8'),
+                file_name="player_comparison_full.csv",
+                mime="text/csv"
+            )
 
     else:
         st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
-        st.markdown(
-            "👉 [Buy your access code on Gumroad]"
-            "(https://moray5.gumroad.com/l/rejrzq?wanted=true)"
-        )
+        st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
 
 
 # ==== TAB 5 ====
