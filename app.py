@@ -159,10 +159,11 @@ with tab4:
             default=["Points/Game", "expected_goals_per_90", "expected_assists_per_90", "Total Points", "Price (£m)"]
         )
         st.warning(
-        "⚠️ Depending on the selected players and metrics, the radar chart may appear incomplete "
-        "if some values are missing or zero. We recommend choosing metrics with consistent data "
-        "and selecting **at least 4 players** for a more stable and meaningful comparison."
-)
+        "⚠️ The radar charts show each stat **on a scale from 0 to 1**, so you can easily compare players even if the original numbers are very different. "
+        "If a player has no data for a selected stat, they won’t show up properly on the chart. "
+        "For best results, choose stats with consistent data and select **at least 4 players**."
+    )
+
 
         if len(selected_players) < 2:
             st.info("Please select at least 2 players.")
