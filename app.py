@@ -136,35 +136,51 @@ with tab3:
 with tab4:
     if has_access:
         st.subheader("⚔️ Compare Players (Radar Chart)")
-    
-        radar_metrics = [
-            "Points/Game", "Points per Million", "Price (£m)", 
-            "form", "value_season", "expected_goals_per_90", "expected_assists_per_90"
+
+        # Opciones dinámicas de métricas disponibles
+        possible_metrics = [
+            ("Points/Game", "Points/Game"),
+            ("Points per Million", "Points per Million"),
+            ("Price (£m)", "Price (£m)"),
+            ("form", "form"),
+            ("value_season", "value_season"),
+            ("expected_goals_per_90", "expected_goals_per_90"),
+            ("expected_assists_per_90", "expected_assists_per_90")
         ]
-    
+
+        # Selección de métricas y jugadores
+        selected_metrics = st.multiselect(
+            "Select metrics to compare",
+            options=[label for label, _ in possible_metrics],
+            default=[label for label, var in possible_metrics if label in ["Points/Game", "Points per Million", "form"]]
+        )
         player_options = df["Player"].dropna().unique()
-        selected = st.multiselect("Select players", player_options, default=player_options[:2])
-    
-        if len(selected) >= 2:
-            # Extraer y limpiar datos
-            compare_df = df[df["Player"].isin(selected)][["Player"] + radar_metrics].copy()
+        selected_players = st.multiselect("Select players to compare", player_options, default=player_options[:2])
+
+        # Validaciones
+        if len(selected_players) < 2:
+            st.info("Select at least 2 players to compare.")
+        elif len(selected_metrics) < 2:
+            st.info("Select at least 2 metrics for a meaningful radar chart.")
+        else:
+            # Mapear métricas seleccionadas a variables del DataFrame
+            radar_metrics = [var for label, var in possible_metrics if label in selected_metrics]
+            compare_df = df[df["Player"].isin(selected_players)][["Player"] + radar_metrics].copy()
             compare_df.dropna(subset=radar_metrics, inplace=True)
             compare_df.set_index("Player", inplace=True)
-    
+
             if compare_df.empty:
-                st.warning("Selected players have missing or incomplete metric data.")
+                st.warning("Selected players have missing data for the chosen metrics.")
             else:
-                # Filtrar columnas con al menos 2 valores no cero para que sean visualmente útiles
-                non_zero_cols = compare_df.loc[:, (compare_df != 0).sum() > 1]
-    
-                if non_zero_cols.shape[1] <= 1:
-                    st.warning("Not enough comparable metrics. Try different players.")
+                # Eliminar columnas con todos ceros
+                non_zero_cols = compare_df.loc[:, (compare_df != 0).sum() > 0]
+                if non_zero_cols.shape[1] < 2:
+                    st.warning("Not enough valid metrics after filtering zeros.")
                 else:
                     # Normalizar
-                    normalized_df = (non_zero_cols - non_zero_cols.min()) / (non_zero_cols.max() - non_zero_cols.min())
-                    melted = normalized_df.reset_index().melt(id_vars="Player", var_name="Metric", value_name="Value")
-    
-                    import plotly.express as px
+                    normalized = (non_zero_cols - non_zero_cols.min()) / (non_zero_cols.max() - non_zero_cols.min())
+                    melted = normalized.reset_index().melt(id_vars="Player", var_name="Metric", value_name="Value")
+
                     fig = px.line_polar(
                         melted,
                         r="Value",
@@ -176,16 +192,13 @@ with tab4:
                     fig.update_traces(fill='toself', opacity=0.6)
                     fig.update_layout(legend_title_text='Player')
                     st.plotly_chart(fig, use_container_width=True)
-    
-                    # Descarga
+
                     st.download_button(
                         label="📥 Download Comparison Data (Normalized)",
-                        data=normalized_df.reset_index().to_csv(index=False).encode('utf-8'),
+                        data=normalized.reset_index().to_csv(index=False).encode('utf-8'),
                         file_name="player_radar_comparison.csv",
                         mime="text/csv"
                     )
-        else:
-            st.info("Select at least 2 players to compare.")
 
     else:
         st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
