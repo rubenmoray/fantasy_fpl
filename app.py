@@ -204,17 +204,17 @@ with tab4:
                 )
 
                 fig = px.line_polar(
-                    melted,
-                    r="Value",
-                    theta="Metric",
-                    color="Player",
-                    line_close=True,
-                    line_shape="linear",
-                    opacity=0.6,
-                )
-                fig.update_traces(fill="toself")
-                fig.update_layout(showlegend=True)
-                st.plotly_chart(fig, use_container_width=True)
+                melted,
+                r="Value",
+                theta="Metric",
+                color="Player",
+                line_close=True,
+                line_shape="linear",
+                title=None
+            )
+            fig.update_traces(fill="toself", opacity=0.6)  # aplica opacidad aquí, no en px.line_polar
+            fig.update_layout(showlegend=True)
+            st.plotly_chart(fig, use_container_width=True)
 
             all_metrics = sum(categories.values(), [])
             filtered = df[df["Player"].isin(selected_players)][["Player"] + all_metrics]
