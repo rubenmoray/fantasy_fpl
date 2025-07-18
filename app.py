@@ -135,78 +135,73 @@ with tab3:
 # ==== TAB 4 ====
 with tab4:
     if has_access:
-        st.subheader("⚔️ Compare Players by Category (Radar Charts)")
-    
-        categories = {
-            "Attack": ["Points/Game", "expected_goals_per_90", "expected_assists_per_90", "expected_goal_involvements_per_90", "threat_rank"],
-            "Creativity": ["creativity_rank", "influence_rank", "ict_index_rank"],
-            "Consistency": ["value_season", "form", "points_per_game_rank"],
-            "Defense/Goalie": ["clean_sheets_per_90", "saves_per_90", "expected_goals_conceded_per_90"],
-            "Participation": ["minutes", "starts_per_90", "% Selected"],
-            "Set Pieces": ["corners_and_indirect_freekicks_order", "direct_freekicks_order", "penalties_order"],
-        }
-    
+        st.subheader("⚔️ Custom Radar Comparison")
+
+        # Selección de jugadores
         selected_players = st.multiselect(
-            label="Select players to compare",
-            options=list(df["Player"].dropna().unique()),
-            default=list(df["Player"].dropna().unique()[:2])
+            "Select players to compare",
+            options=df["Player"].dropna().unique(),
+            default=df["Player"].dropna().unique()[:2]
         )
-    
+
+        # Selección de métricas numéricas (excluyendo Player y otras no comparables)
+        numeric_cols = df.select_dtypes(include='number').columns
+        blacklist = ["Player ID"]
+        metric_options = [col for col in numeric_cols if col not in blacklist]
+
+        selected_metrics = st.multiselect(
+            "Select metrics to include in radar",
+            options=sorted(metric_options),
+            default=["Points/Game", "expected_goals_per_90", "expected_assists_per_90"]
+        )
+
         if len(selected_players) < 2:
-            st.info("Select at least 2 players to compare.")
+            st.info("Select at least two players to compare.")
+        elif len(selected_metrics) < 2:
+            st.info("Select at least two metrics.")
         else:
-            for cat_name, metrics in categories.items():
-                valid_metrics = [m for m in metrics if m in df.columns]
-                if len(valid_metrics) < 2:
-                    continue
-    
-                compare_df = df[df["Player"].isin(selected_players)][["Player"] + valid_metrics].copy()
-                compare_df.set_index("Player", inplace=True)
-                compare_df = compare_df.fillna(0)  # Evitar que se descarten columnas con NaN
-    
-                if compare_df.shape[0] < 2:
-                    st.caption(f"Not enough player data for category **{cat_name}**.")
-                    continue
-    
-                norm = (compare_df - compare_df.min()) / (compare_df.max() - compare_df.min() + 1e-6)
-    
+            compare_df = df[df["Player"].isin(selected_players)][["Player"] + selected_metrics].copy()
+            compare_df.set_index("Player", inplace=True)
+            compare_df = compare_df.fillna(0)
+
+            # Verificar que todos tengan valores > 0
+            valid_df = compare_df[(compare_df > 0).all(axis=1)]
+            if valid_df.shape[0] < 2:
+                st.warning("Selected players don't have valid data for the selected metrics.")
+                st.caption("Make sure all selected players have non-zero values in all selected metrics.")
+            else:
+                # Normalizar
+                norm = (valid_df - valid_df.min()) / (valid_df.max() - valid_df.min() + 1e-6)
+
                 import plotly.graph_objects as go
                 fig = go.Figure()
-    
-                for player in selected_players:
-                    if player in norm.index:
-                        fig.add_trace(go.Scatterpolar(
-                            r=norm.loc[player].values,
-                            theta=valid_metrics,
-                            fill='toself',
-                            name=player,
-                            opacity=0.6,
-                            showlegend=True
-                        ))
-    
+
+                for player in norm.index:
+                    fig.add_trace(go.Scatterpolar(
+                        r=norm.loc[player].values,
+                        theta=selected_metrics,
+                        fill='toself',
+                        name=player,
+                        opacity=0.6
+                    ))
+
                 fig.update_layout(
                     polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
                     showlegend=True,
-                    title=cat_name
+                    title="🔄 Player Radar Comparison"
                 )
-                st.markdown(f"### 📌 {cat_name}")
                 st.plotly_chart(fig, use_container_width=True)
-    
-            # Descarga CSV con todos los datos
-            all_metrics = sum(categories.values(), [])
-            all_metrics = [m for m in all_metrics if m in df.columns]
-            export_df = df[df["Player"].isin(selected_players)][["Player"] + all_metrics].copy()
-            st.download_button(
-                label="📥 Download all selected comparison data",
-                data=export_df.to_csv(index=False).encode("utf-8"),
-                file_name="player_comparison_full.csv",
-                mime="text/csv"
-            )
+
+                # Descarga
+                st.download_button(
+                    label="📥 Download Comparison Data (Normalized)",
+                    data=norm.reset_index().to_csv(index=False).encode('utf-8'),
+                    file_name="custom_radar_comparison.csv",
+                    mime="text/csv"
+                )
     else:
         st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
         st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
-
-
 
 # ==== TAB 5 ====
 with tab5:
