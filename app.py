@@ -134,103 +134,55 @@ with tab3:
 
 # ==== TAB 4 ====
 # ==== TAB 4: Comparison by Category ====
+import plotly.graph_objects as go
+
+# ==== TAB 4: Comparison by Category ====
 with tab4:
     if has_access:
         st.subheader("⚔️ Compare Players by Category (Radar Charts)")
 
-        categories = {
-            "Attack": [
-                "Points/Game",
-                "expected_goals_per_90",
-                "expected_assists_per_90",
-                "expected_goal_involvements_per_90",
-                "threat_rank",
-            ],
-            "Creativity": [
-                "creativity_rank",
-                "influence_rank",
-                "ict_index_rank",
-            ],
-            "Consistency": [
-                "value_season",
-                "form",
-                "points_per_game_rank",
-            ],
-            "Defense/Goalie": [
-                "clean_sheets_per_90",
-                "saves_per_90",
-                "expected_goals_conceded_per_90",
-            ],
-            "Participation": [
-                "minutes",
-                "starts_per_90",
-                "% Selected",
-            ],
-            "Set Pieces": [
-                "corners_and_indirect_freekicks_order",
-                "direct_freekicks_order",
-                "penalties_order",
-            ],
-        }
+        categories = { ... }  # tu diccionario completo
 
-        selected_players = st.multiselect(
-            "Select players to compare",
-            df["Player"].dropna().unique(),
-            default=df["Player"].dropna().unique()[:2],
-        )
+        selected_players = st.multiselect(...)
 
         if len(selected_players) < 2:
             st.info("Select at least 2 players to compare.")
         else:
             for cat_name, metrics in categories.items():
-                valid_metrics = [m for m in metrics if m in df.columns]
-                if len(valid_metrics) < 2:
+                valid = [m for m in metrics if m in df.columns]
+                if len(valid) < 2:
                     continue
 
-                st.markdown(f"### 📌 {cat_name}")
-                compare_df = df[df["Player"].isin(selected_players)][["Player"] + valid_metrics]
-
-                compare_df = compare_df.dropna(subset=valid_metrics, how="all")
-                compare_df = compare_df.fillna(0)
-                compare_df.set_index("Player", inplace=True)
-
+                compare_df = df[df["Player"].isin(selected_players)][["Player"] + valid]
+                compare_df = compare_df.dropna(subset=valid, how="all").fillna(0).set_index("Player")
                 if compare_df.empty:
                     st.caption("Not enough data in this category.")
                     continue
 
+                # Normalización
                 norm = (compare_df - compare_df.min()) / (compare_df.max() - compare_df.min() + 1e-6)
-                melted = norm.reset_index().melt(
-                    id_vars="Player", var_name="Metric", value_name="Value"
-                )
 
-                fig = px.line_polar(
-                melted,
-                r="Value",
-                theta="Metric",
-                color="Player",
-                line_close=True,
-                line_shape="linear",
-                title=None
-            )
-            fig.update_traces(fill="toself", opacity=0.6)  # aplica opacidad aquí, no en px.line_polar
-            fig.update_layout(showlegend=True)
-            st.plotly_chart(fig, use_container_width=True)
+                fig = go.Figure()
+                for player in norm.index:
+                    fig.add_trace(go.Scatterpolar(
+                        r=norm.loc[player].values,
+                        theta=valid,
+                        fill='toself',
+                        name=player,
+                        opacity=0.6
+                    ))
+                fig.update_layout(showlegend=True, polar=dict(radialaxis=dict(visible=True, range=[0,1])))
+                st.markdown(f"### 📌 {cat_name}")
+                st.plotly_chart(fig, use_container_width=True)
 
+            # Botón descarga
             all_metrics = sum(categories.values(), [])
-            filtered = df[df["Player"].isin(selected_players)][["Player"] + all_metrics]
-            st.download_button(
-                label="📥 Download full comparison data",
+            filtered = df[df["Player"].isin(selected_players)][["Player"] + all_metrics].fillna(0)
+            st.download_button("📥 Download full comparison data",
                 data=filtered.reset_index(drop=True).to_csv(index=False).encode("utf-8"),
-                file_name="player_comparison_full.csv",
-                mime="text/csv",
-            )
-
+                file_name="player_comparison_full.csv", mime="text/csv")
     else:
-        st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
-        st.markdown(
-            "👉 [Buy your access code on Gumroad]"
-            "(https://moray5.gumroad.com/l/rejrzq?wanted=true)"
-        )
+        st.warning(...)
 
 # ==== TAB 5 ====
 with tab5:
