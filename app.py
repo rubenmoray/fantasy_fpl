@@ -135,76 +135,72 @@ with tab3:
         st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
 
 # ==== TAB 4 ====
+import plotly.graph_objects as go  # Asegúrate de tener esto arriba si no está
+
+# ==== TAB 4 ====
 with tab4:
     if has_access:
-        st.subheader("⚔️ Custom Radar Comparison")
+        st.subheader("⚔️ Custom Radar Chart Comparison")
 
-        # Selección de jugadores
+        # 1. Selección de jugadores
         selected_players = st.multiselect(
             "Select players to compare",
-            options=df["Player"].dropna().unique(),
+            df["Player"].dropna().unique(),
             default=df["Player"].dropna().unique()[:2]
         )
 
-        # Selección de métricas numéricas (excluyendo Player y otras no comparables)
-        numeric_cols = df.select_dtypes(include='number').columns
-        blacklist = ["Player ID"]
-        metric_options = [col for col in numeric_cols if col not in blacklist]
+        # 2. Selección de métricas
+        numeric_cols = df.select_dtypes(include='number').columns.tolist()
+        available_metrics = [col for col in numeric_cols if col not in ["Player ID"]]
 
         selected_metrics = st.multiselect(
-            "Select metrics to include in radar",
-            options=sorted(metric_options),
-            default=["Points/Game", "expected_goals_per_90", "expected_assists_per_90"]
+            "Select metrics to compare",
+            available_metrics,
+            default=["Points/Game", "expected_goals_per_90", "expected_assists_per_90", "Total Points", "Price (£m)"]
         )
 
         if len(selected_players) < 2:
-            st.info("Select at least two players to compare.")
+            st.info("Please select at least 2 players.")
         elif len(selected_metrics) < 2:
-            st.info("Select at least two metrics.")
+            st.info("Please select at least 2 metrics.")
         else:
-            compare_df = df[df["Player"].isin(selected_players)][["Player"] + selected_metrics].copy()
+            compare_df = df[df["Player"].isin(selected_players)][["Player"] + selected_metrics].dropna()
             compare_df.set_index("Player", inplace=True)
-            compare_df = compare_df.fillna(0)
 
-            # Filtramos solo métricas con al menos 2 jugadores con valor > 0
-            valid_metrics = [metric for metric in selected_metrics if (compare_df[metric] > 0).sum() >= 2]
+            # Filtrar columnas con al menos 2 valores numéricos > 0
+            non_zero = compare_df.loc[:, (compare_df > 0).sum() >= 2]
 
-            if len(valid_metrics) < 2:
-                st.warning("Not enough valid metrics across selected players. Try changing the metrics.")
+            if non_zero.shape[1] < 2 or compare_df.shape[0] < 2:
+                st.warning("Not enough valid data across players and metrics to build radar.")
             else:
-                norm_df = compare_df[valid_metrics]
-                norm_df = norm_df[(norm_df > 0).all(axis=1)]
+                # Normalizar
+                norm = (non_zero - non_zero.min()) / (non_zero.max() - non_zero.min())
+                categories = norm.columns.tolist()
 
-                if norm_df.shape[0] < 2:
-                    st.warning("Not enough players with valid data for the selected metrics.")
-                else:
-                    norm = (norm_df - norm_df.min()) / (norm_df.max() - norm_df.min() + 1e-6)
-                    melted = norm.reset_index().melt(id_vars="Player", var_name="Metric", value_name="Value")
+                fig = go.Figure()
+                for player in norm.index:
+                    fig.add_trace(go.Scatterpolar(
+                        r=norm.loc[player].values,
+                        theta=categories,
+                        fill='toself',
+                        name=player,
+                        opacity=0.6
+                    ))
 
-                    fig = go.Figure()
-                    for player in norm.index:
-                        fig.add_trace(go.Scatterpolar(
-                            r=norm.loc[player].values,
-                            theta=valid_metrics,
-                            fill='toself',
-                            name=player,
-                            opacity=0.6
-                        ))
+                fig.update_layout(
+                    polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+                    showlegend=True,
+                    title="🔄 Player Comparison Radar"
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
-                    fig.update_layout(
-                        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
-                        showlegend=True,
-                        title="🔄 Player Radar Comparison"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-
-                    st.download_button(
-                        label="📥 Download Comparison Data (Normalized)",
-                        data=norm.reset_index().to_csv(index=False).encode('utf-8'),
-                        file_name="custom_radar_comparison.csv",
-                        mime="text/csv"
-                    )
-
+                # Descarga CSV
+                st.download_button(
+                    label="📥 Download Comparison Data",
+                    data=compare_df.reset_index().to_csv(index=False).encode('utf-8'),
+                    file_name="custom_player_comparison.csv",
+                    mime="text/csv"
+                )
     else:
         st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
         st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
