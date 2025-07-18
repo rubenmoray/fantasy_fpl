@@ -136,38 +136,33 @@ with tab3:
 with tab4:
     if has_access:
         st.subheader("⚔️ Compare Players (Radar Chart)")
-        # Aquí va tu radar chart y comparador completo
-        st.info("Radar comparison visible here.")
-            st.subheader("⚔️ Compare Players (Radar Chart)")
 
         radar_metrics = [
-            "Points/Game", "Points per Million", "Price (£m)", 
+            "Points/Game", "Points per Million", "Price (£m)",
             "form", "value_season", "expected_goals_per_90", "expected_assists_per_90"
         ]
-    
+
         player_options = df["Player"].dropna().unique()
         selected = st.multiselect("Select players", player_options, default=player_options[:2])
-    
+
         if len(selected) >= 2:
-            # Extraer y limpiar datos
             compare_df = df[df["Player"].isin(selected)][["Player"] + radar_metrics].copy()
             compare_df.dropna(subset=radar_metrics, inplace=True)
             compare_df.set_index("Player", inplace=True)
-    
+
             if compare_df.empty:
                 st.warning("Selected players have missing or incomplete metric data.")
             else:
-                # Filtrar columnas con al menos 2 valores no cero para que sean visualmente útiles
                 non_zero_cols = compare_df.loc[:, (compare_df != 0).sum() > 1]
-    
+
                 if non_zero_cols.shape[1] <= 1:
                     st.warning("Not enough comparable metrics. Try different players.")
                 else:
-                    # Normalizar
                     normalized_df = (non_zero_cols - non_zero_cols.min()) / (non_zero_cols.max() - non_zero_cols.min())
-                    melted = normalized_df.reset_index().melt(id_vars="Player", var_name="Metric", value_name="Value")
-    
-                    import plotly.express as px
+                    melted = normalized_df.reset_index().melt(
+                        id_vars="Player", var_name="Metric", value_name="Value"
+                    )
+
                     fig = px.line_polar(
                         melted,
                         r="Value",
@@ -179,8 +174,7 @@ with tab4:
                     fig.update_traces(fill='toself', opacity=0.6)
                     fig.update_layout(legend_title_text='Player')
                     st.plotly_chart(fig, use_container_width=True)
-    
-                    # Descarga
+
                     st.download_button(
                         label="📥 Download Comparison Data (Normalized)",
                         data=normalized_df.reset_index().to_csv(index=False).encode('utf-8'),
@@ -189,10 +183,13 @@ with tab4:
                     )
         else:
             st.info("Select at least 2 players to compare.")
-
     else:
         st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
-        st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
+        st.markdown(
+            "👉 [Buy your access code on Gumroad]"
+            "(https://moray5.gumroad.com/l/rejrzq?wanted=true)"
+        )
+
 
 # ==== TAB 5 ====
 with tab5:
