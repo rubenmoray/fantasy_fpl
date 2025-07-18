@@ -133,7 +133,8 @@ with tab3:
         st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
 
 # ==== TAB 4 ====
-if has_access:
+with tab4:
+    if has_access:
     st.subheader("⚔️ Compare Players by Category (Radar Charts)")
 
     categories = {
