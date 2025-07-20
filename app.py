@@ -20,6 +20,10 @@ df = load_data()
 
 df = df.apply(pd.to_numeric, errors='ignore')
 
+# Excluir managers u otras posiciones no válidas
+df = df[df["Position"].isin(["Goalkeeper", "Defender", "Midfielder", "Forward"])]
+
+
 # ==== CÁLCULO DE VALUE SCORE ====
 @st.cache_data
 def compute_value_scores(df):
