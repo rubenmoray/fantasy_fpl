@@ -149,26 +149,59 @@ with tab1:
 with tab2:
     st.subheader("🎯 Top 10 by Value Score")
 
-    top_value = df.sort_values("Value Score", ascending=False).head(10)
-    st.table(top_value[[
-        "Player", "Team", "Position", "Value Score", "Price (£m)", "Points/Game", "Status"
-    ]])
-    st.subheader("🎯 Top 10 by Value Score")
-    top_value = df.sort_values("Value Score", ascending=False).head(10)
-    st.table(top_value[["Player", "Team", "Position", "Value Score", "Price (£m)", "Points/Game", "Status"]])
+    st.info("Filters from the sidebar are applied to all rankings shown below.")
 
+    # Aplicar filtros (igual que en Tab 1)
+    filtered_df_tab2 = df[
+        (df["Position"].isin(position)) &
+        (df["Team"].isin(team)) &
+        (df["Price (£m)"] <= max_price) &
+        (df["minutes"] >= min_minutes) &
+        (df["form"] >= min_form) &
+        (df["value_season"] >= min_value) &
+        (df["% Selected"] <= max_selected)
+    ]
+
+    # Top 10 por Value Score
+    if "Value Score" in filtered_df_tab2.columns:
+        top_value = filtered_df_tab2.sort_values("Value Score", ascending=False).head(10)
+        st.table(top_value[[
+            "Player", "Team", "Position", "Value Score", "Price (£m)", "Points/Game", "Status"
+        ]])
+    else:
+        st.warning("❗ 'Value Score' column not found in dataset.")
+
+    # Top 10 por Points per Million
     st.subheader("🔥 Top 10 by Points per Million")
-    top_df = df.sort_values("Points per Million", ascending=False).head(10)
-    st.table(top_df[["Player", "Team", "Position", "Points/Game", "Points per Million", "Price (£m)", "Status"]])
-    if "Total Points" in df.columns:
+    top_df = filtered_df_tab2.sort_values("Points per Million", ascending=False).head(10)
+    st.table(top_df[[
+        "Player", "Team", "Position", "Points/Game", "Points per Million", "Price (£m)", "Status"
+    ]])
+
+    # Top 10 por Total Points
+    if "Total Points" in filtered_df_tab2.columns:
         st.subheader("🏅 Top 10 by Total Points")
-        top_total = df.sort_values("Total Points", ascending=False).head(10)
+        top_total = filtered_df_tab2.sort_values("Total Points", ascending=False).head(10)
         fig = px.bar(top_total, x="Total Points", y="Player", color="Position", orientation="h")
         st.plotly_chart(fig)
+
+    # Picks diferenciales
     st.subheader("💎 Differential Picks (<10% selected & high value)")
-    diff_df = df[(df["% Selected"] < 10) & (df["value_season"] >= df["value_season"].median())]
-    st.table(diff_df[["Player", "Team", "Position", "Points/Game", "value_season", "% Selected", "Status"]].sort_values("value_season", ascending=False).head(10))
-    st.download_button("📥 Download Top Picks CSV", data=top_df.to_csv(index=False).encode('utf-8'), file_name='top_10_points_per_million.csv', mime='text/csv')
+    diff_df = filtered_df_tab2[
+        (filtered_df_tab2["% Selected"] < 10) &
+        (filtered_df_tab2["value_season"] >= filtered_df_tab2["value_season"].median())
+    ]
+    st.table(diff_df[[
+        "Player", "Team", "Position", "Points/Game", "value_season", "% Selected", "Status"
+    ]].sort_values("value_season", ascending=False).head(10))
+
+    # Botón de descarga
+    st.download_button(
+        label="📥 Download Top Picks CSV",
+        data=top_df.to_csv(index=False).encode('utf-8'),
+        file_name='top_10_points_per_million.csv',
+        mime='text/csv'
+    )
 
 # ==== TAB 3 ====
 # ==== TAB 3: Performance ====
