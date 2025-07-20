@@ -73,7 +73,7 @@ def calculate_value_score(row):
 
     return round(score, 3)
 
-
+df["Value Score"] = df.apply(calculate_value_score, axis=1)
 
 # === Premium Access ===
 st.sidebar.markdown("---")
