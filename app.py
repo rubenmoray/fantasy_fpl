@@ -18,6 +18,52 @@ def load_data():
 
 df = load_data()
 
+def calculate_value_score(row):
+    if row["Position"] == "GKP":
+        score = (
+            0.25 * row["Points/Game"] +
+            0.20 * row.get("saves_per_90", 0) +
+            0.20 * row.get("clean_sheets_per_90", 0) +
+            0.15 * (1 / (row.get("expected_goals_conceded_per_90", 1) + 0.01)) +  # invertido
+            0.10 * row.get("form", 0) -
+            0.10 * row["Price (£m)"]
+        )
+    elif row["Position"] == "DEF":
+        score = (
+            0.25 * row["Points/Game"] +
+            0.15 * row.get("expected_goal_involvements_per_90", 0) +
+            0.15 * (1 / (row.get("expected_goals_conceded_per_90", 1) + 0.01)) +
+            0.15 * row.get("clean_sheets_per_90", 0) +
+            0.10 * row.get("form", 0) +
+            0.10 * row.get("minutes", 0) / 3000 -
+            0.05 * row["Price (£m)"]
+        )
+    elif row["Position"] == "MID":
+        score = (
+            0.25 * row["Points/Game"] +
+            0.20 * row.get("expected_goals_per_90", 0) +
+            0.20 * row.get("expected_assists_per_90", 0) +
+            0.10 * row.get("expected_goal_involvements_per_90", 0) +
+            0.10 * row.get("creativity_rank", 0) +
+            0.10 * row.get("form", 0) -
+            0.05 * row["Price (£m)"]
+        )
+    elif row["Position"] == "FWD":
+        score = (
+            0.30 * row["Points/Game"] +
+            0.30 * row.get("expected_goals_per_90", 0) +
+            0.15 * row.get("expected_goal_involvements_per_90", 0) +
+            0.10 * row.get("form", 0) +
+            0.10 * row.get("minutes", 0) / 3000 -
+            0.05 * row["Price (£m)"]
+        )
+    else:
+        score = 0
+    return round(score, 3)
+
+df["Value Score"] = df.apply(calculate_value_score, axis=1)
+
+
 # === Premium Access ===
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔐 Premium Access")
@@ -98,6 +144,10 @@ with tab1:
 
 # ==== TAB 2 ====
 with tab2:
+    st.subheader("🎯 Top 10 by Value Score")
+    top_value = df.sort_values("Value Score", ascending=False).head(10)
+    st.table(top_value[["Player", "Team", "Position", "Value Score", "Price (£m)", "Points/Game", "Status"]])
+
     st.subheader("🔥 Top 10 by Points per Million")
     top_df = df.sort_values("Points per Million", ascending=False).head(10)
     st.table(top_df[["Player", "Team", "Position", "Points/Game", "Points per Million", "Price (£m)", "Status"]])
