@@ -20,60 +20,48 @@ df = load_data()
 
 df = df.apply(pd.to_numeric, errors='ignore')
 
-def safe_get(row, col, default=0):
-    value = row.get(col, default)
-    try:
-        return float(value) if pd.notna(value) else default
-    except:
-        return default
+# ==== CÁLCULO DE VALUE SCORE ====
+@st.cache_data
+def compute_value_scores(df):
+    def safe_get(row, col, default=0):
+        value = row.get(col, default)
+        try:
+            return float(value) if pd.notna(value) else default
+        except:
+            return default
 
-def calculate_value_score(row):
-    pos = row.get("Position", "")
-    
-    if pos == "GKP":
-        score = (
-            0.25 * safe_get(row, "Points/Game") +
-            0.20 * safe_get(row, "saves_per_90") +
-            0.20 * safe_get(row, "clean_sheets_per_90") +
-            0.15 * (1 / (safe_get(row, "expected_goals_conceded_per_90") + 0.01)) +
-            0.10 * safe_get(row, "form") -
-            0.10 * safe_get(row, "Price (£m)")
-        )
-    elif pos == "DEF":
-        score = (
-            0.25 * safe_get(row, "Points/Game") +
-            0.15 * safe_get(row, "expected_goal_involvements_per_90") +
-            0.15 * (1 / (safe_get(row, "expected_goals_conceded_per_90") + 0.01)) +
-            0.15 * safe_get(row, "clean_sheets_per_90") +
-            0.10 * safe_get(row, "form") +
-            0.10 * safe_get(row, "minutes") / 3000 -
-            0.05 * safe_get(row, "Price (£m)")
-        )
-    elif pos == "MID":
-        score = (
-            0.25 * safe_get(row, "Points/Game") +
-            0.20 * safe_get(row, "expected_goals_per_90") +
-            0.20 * safe_get(row, "expected_assists_per_90") +
-            0.10 * safe_get(row, "expected_goal_involvements_per_90") +
-            0.10 * (1 / (safe_get(row, "creativity_rank") + 0.01)) +
-            0.10 * safe_get(row, "form") -
-            0.05 * safe_get(row, "Price (£m)")
-        )
-    elif pos == "FWD":
-        score = (
-            0.30 * safe_get(row, "Points/Game") +
-            0.30 * safe_get(row, "expected_goals_per_90") +
-            0.15 * safe_get(row, "expected_goal_involvements_per_90") +
-            0.10 * safe_get(row, "form") +
-            0.10 * safe_get(row, "minutes") / 3000 -
-            0.05 * safe_get(row, "Price (£m)")
-        )
-    else:
-        score = 0
+    def calculate_value_score(row):
+        pos = row.get("Position", "")
+        price = safe_get(row, "Price (£m)")
+        points = safe_get(row, "Total Points")
+        points_game = safe_get(row, "Points/Game")
+        xG = safe_get(row, "expected_goals_per_90")
+        xA = safe_get(row, "expected_assists_per_90")
+        xGI = safe_get(row, "expected_goal_involvements_per_90")
+        xGC = safe_get(row, "expected_goals_conceded_per_90")
+        cs = safe_get(row, "clean_sheets_per_90")
+        saves = safe_get(row, "saves_per_90")
 
-    return round(score, 3)
+        # Fórmulas personalizadas según posición
+        if pos == "Goalkeeper":
+            score = (saves * 3 + cs * 4 - xGC * 2 + points_game * 2) / (price + 0.1)
+        elif pos == "Defender":
+            score = (cs * 4 + xGI * 3 + points_game * 2) / (price + 0.1)
+        elif pos == "Midfielder":
+            score = (xG * 3 + xA * 2 + xGI * 2 + points_game * 2) / (price + 0.1)
+        elif pos == "Forward":
+            score = (xG * 3 + xA * 1.5 + points_game * 2.5) / (price + 0.1)
+        else:
+            score = (points_game + points) / (price + 0.1)
 
-df["Value Score"] = df.apply(calculate_value_score, axis=1)
+        return round(score, 3)
+
+    df["Value Score"] = df.apply(calculate_value_score, axis=1)
+    return df
+
+# Aplicar cálculo de score
+df = compute_value_scores(df)
+
 
 # === Premium Access ===
 st.sidebar.markdown("---")
@@ -155,6 +143,12 @@ with tab1:
 
 # ==== TAB 2 ====
 with tab2:
+    st.subheader("🎯 Top 10 by Value Score")
+
+    top_value = df.sort_values("Value Score", ascending=False).head(10)
+    st.table(top_value[[
+        "Player", "Team", "Position", "Value Score", "Price (£m)", "Points/Game", "Status"
+    ]])
     st.subheader("🎯 Top 10 by Value Score")
     top_value = df.sort_values("Value Score", ascending=False).head(10)
     st.table(top_value[["Player", "Team", "Position", "Value Score", "Price (£m)", "Points/Game", "Status"]])
