@@ -18,50 +18,61 @@ def load_data():
 
 df = load_data()
 
+df = df.apply(pd.to_numeric, errors='ignore')
+
+def safe_get(row, col, default=0):
+    value = row.get(col, default)
+    try:
+        return float(value) if pd.notna(value) else default
+    except:
+        return default
+
 def calculate_value_score(row):
-    if row["Position"] == "GKP":
+    pos = row.get("Position", "")
+    
+    if pos == "GKP":
         score = (
-            0.25 * row["Points/Game"] +
-            0.20 * row.get("saves_per_90", 0) +
-            0.20 * row.get("clean_sheets_per_90", 0) +
-            0.15 * (1 / (row.get("expected_goals_conceded_per_90", 1) + 0.01)) +  # invertido
-            0.10 * row.get("form", 0) -
-            0.10 * row["Price (£m)"]
+            0.25 * safe_get(row, "Points/Game") +
+            0.20 * safe_get(row, "saves_per_90") +
+            0.20 * safe_get(row, "clean_sheets_per_90") +
+            0.15 * (1 / (safe_get(row, "expected_goals_conceded_per_90") + 0.01)) +
+            0.10 * safe_get(row, "form") -
+            0.10 * safe_get(row, "Price (£m)")
         )
-    elif row["Position"] == "DEF":
+    elif pos == "DEF":
         score = (
-            0.25 * row["Points/Game"] +
-            0.15 * row.get("expected_goal_involvements_per_90", 0) +
-            0.15 * (1 / (row.get("expected_goals_conceded_per_90", 1) + 0.01)) +
-            0.15 * row.get("clean_sheets_per_90", 0) +
-            0.10 * row.get("form", 0) +
-            0.10 * row.get("minutes", 0) / 3000 -
-            0.05 * row["Price (£m)"]
+            0.25 * safe_get(row, "Points/Game") +
+            0.15 * safe_get(row, "expected_goal_involvements_per_90") +
+            0.15 * (1 / (safe_get(row, "expected_goals_conceded_per_90") + 0.01)) +
+            0.15 * safe_get(row, "clean_sheets_per_90") +
+            0.10 * safe_get(row, "form") +
+            0.10 * safe_get(row, "minutes") / 3000 -
+            0.05 * safe_get(row, "Price (£m)")
         )
-    elif row["Position"] == "MID":
+    elif pos == "MID":
         score = (
-            0.25 * row["Points/Game"] +
-            0.20 * row.get("expected_goals_per_90", 0) +
-            0.20 * row.get("expected_assists_per_90", 0) +
-            0.10 * row.get("expected_goal_involvements_per_90", 0) +
-            0.10 * row.get("creativity_rank", 0) +
-            0.10 * row.get("form", 0) -
-            0.05 * row["Price (£m)"]
+            0.25 * safe_get(row, "Points/Game") +
+            0.20 * safe_get(row, "expected_goals_per_90") +
+            0.20 * safe_get(row, "expected_assists_per_90") +
+            0.10 * safe_get(row, "expected_goal_involvements_per_90") +
+            0.10 * (1 / (safe_get(row, "creativity_rank") + 0.01)) +
+            0.10 * safe_get(row, "form") -
+            0.05 * safe_get(row, "Price (£m)")
         )
-    elif row["Position"] == "FWD":
+    elif pos == "FWD":
         score = (
-            0.30 * row["Points/Game"] +
-            0.30 * row.get("expected_goals_per_90", 0) +
-            0.15 * row.get("expected_goal_involvements_per_90", 0) +
-            0.10 * row.get("form", 0) +
-            0.10 * row.get("minutes", 0) / 3000 -
-            0.05 * row["Price (£m)"]
+            0.30 * safe_get(row, "Points/Game") +
+            0.30 * safe_get(row, "expected_goals_per_90") +
+            0.15 * safe_get(row, "expected_goal_involvements_per_90") +
+            0.10 * safe_get(row, "form") +
+            0.10 * safe_get(row, "minutes") / 3000 -
+            0.05 * safe_get(row, "Price (£m)")
         )
     else:
         score = 0
+
     return round(score, 3)
 
-df["Value Score"] = df.apply(calculate_value_score, axis=1)
 
 
 # === Premium Access ===
