@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 
 
 st.set_page_config(page_title="FPL Fantasy Tracker", layout="wide")
-st.title("📊 FPL Fantasy Tracker 2025/26")
+st.title("📊 FPL Fantasy Tracker 2025/26 (*data still from last season*)")
 
 # === Load Excel ===
 @st.cache_data
