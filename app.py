@@ -350,11 +350,6 @@ with tab5:
 
 
 # ==== TAB 6: FDR Impact ====
-# ==== TAB 6: FDR Impact ====
-tab_titles = [
-    "📋 Player List", "🔥 Top Picks", "📈 Performance", "⚔️ Comparison", "⚽️ Set Pieces", "📊 FDR Impact"
-]
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(tab_titles)
 
 with tab6:
     if has_access:
