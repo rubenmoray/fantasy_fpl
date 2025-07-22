@@ -348,55 +348,54 @@ with tab5:
 # (Place this inside your Streamlit app code)
 # Add this as a new Tab 6: FDR Impact Analysis
 
+
+# ==== TAB 6: FDR Impact ====
 with tab6:
-    with st.expander("📊 Player Performance by Fixture Difficulty (FDR)", expanded=False):
+    st.subheader("📊 FDR Impact Analysis")
     if has_access:
-        st.subheader("📊 Avg Points by FDR")
-        
-        selected_fdr_players = st.multiselect(
+        st.markdown("""
+        This chart shows how player performance varies by **Fixture Difficulty Rating (FDR)**.
+        The logic assumes that lower FDRs represent easier opponents, and performance is grouped accordingly.
+        """)
+
+        selected_players_fdr = st.multiselect(
             "Select players to analyze",
-            df["Player"].dropna().unique(),
-            default=df["Player"].dropna().unique()[:2]
+            sorted(df["Player"].dropna().unique()),
+            default=sorted(df["Player"].dropna().unique())[:3]
         )
 
-        # Function to get FDR-level gameweek data
         @st.cache_data
-        def get_fdr_data(player_id):
+        def get_history(player_id):
             url = f"https://fantasy.premierleague.com/api/element-summary/{int(player_id)}/"
             res = requests.get(url)
-            if res.status_code != 200:
-                return pd.DataFrame()
-            df_hist = pd.DataFrame(res.json()["history"])
-            return df_hist[df_hist["was_home"].notna()][["round", "total_points", "opponent_team", "difficulty"]]
+            return pd.DataFrame(res.json()["history"]) if res.status_code == 200 else pd.DataFrame()
 
-        all_fdr_data = []
-        for name in selected_fdr_players:
-            row = df[df["Player"] == name]
-            if row.empty:
-                continue
-            pid = row["Player ID"].values[0]
-            hist = get_fdr_data(pid)
-            if not hist.empty:
-                hist["Player"] = name
-                all_fdr_data.append(hist)
+        if selected_players_fdr:
+            fdr_dfs = []
+            for name in selected_players_fdr:
+                player_id = df[df["Player"] == name]["Player ID"].values[0]
+                history = get_history(player_id)
+                if not history.empty:
+                    grouped = history.groupby("fixture_difficulty")["total_points"].mean().reset_index()
+                    grouped["Player"] = name
+                    fdr_dfs.append(grouped)
 
-        if all_fdr_data:
-            combined_fdr = pd.concat(all_fdr_data)
-            avg_by_difficulty = combined_fdr.groupby(["Player", "difficulty"], as_index=False)["total_points"].mean()
-
-            fig = px.bar(
-                avg_by_difficulty,
-                x="difficulty",
-                y="total_points",
-                color="Player",
-                barmode="group",
-                labels={"difficulty": "Fixture Difficulty", "total_points": "Avg Points"},
-                title="Average Points by Fixture Difficulty"
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            if fdr_dfs:
+                fdr_combined = pd.concat(fdr_dfs)
+                fig = px.line(
+                    fdr_combined,
+                    x="fixture_difficulty",
+                    y="total_points",
+                    color="Player",
+                    markers=True,
+                    title="Average Points by Fixture Difficulty (FDR)"
+                )
+                fig.update_layout(xaxis_title="FDR (1 = Easy, 5 = Hard)", yaxis_title="Avg Points")
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No data found for selected players.")
         else:
-            st.info("No gameweek data available yet.")
+            st.info("Select at least one player to view FDR impact.")
     else:
         st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
         st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
-
