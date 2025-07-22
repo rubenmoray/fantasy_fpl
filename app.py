@@ -351,8 +351,9 @@ with tab5:
 
 # ==== TAB 6: FDR Impact ====
 with tab6:
-    st.subheader("📊 FDR Impact Analysis")
+    
     if has_access:
+        st.subheader("📊 FDR Impact Analysis")
         st.markdown("""
         This chart shows how player performance varies by **Fixture Difficulty Rating (FDR)**.
         The logic assumes that lower FDRs represent easier opponents, and performance is grouped accordingly.
