@@ -344,3 +344,58 @@ with tab5:
     else:
         st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
         st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
+
+# (Place this inside your Streamlit app code)
+# Add this as a new Tab 6: FDR Impact Analysis
+
+with st.expander("📊 Player Performance by Fixture Difficulty (FDR)", expanded=False):
+    if has_access:
+        st.subheader("📊 Avg Points by FDR")
+        
+        selected_fdr_players = st.multiselect(
+            "Select players to analyze",
+            df["Player"].dropna().unique(),
+            default=df["Player"].dropna().unique()[:2]
+        )
+
+        # Function to get FDR-level gameweek data
+        @st.cache_data
+        def get_fdr_data(player_id):
+            url = f"https://fantasy.premierleague.com/api/element-summary/{int(player_id)}/"
+            res = requests.get(url)
+            if res.status_code != 200:
+                return pd.DataFrame()
+            df_hist = pd.DataFrame(res.json()["history"])
+            return df_hist[df_hist["was_home"].notna()][["round", "total_points", "opponent_team", "difficulty"]]
+
+        all_fdr_data = []
+        for name in selected_fdr_players:
+            row = df[df["Player"] == name]
+            if row.empty:
+                continue
+            pid = row["Player ID"].values[0]
+            hist = get_fdr_data(pid)
+            if not hist.empty:
+                hist["Player"] = name
+                all_fdr_data.append(hist)
+
+        if all_fdr_data:
+            combined_fdr = pd.concat(all_fdr_data)
+            avg_by_difficulty = combined_fdr.groupby(["Player", "difficulty"], as_index=False)["total_points"].mean()
+
+            fig = px.bar(
+                avg_by_difficulty,
+                x="difficulty",
+                y="total_points",
+                color="Player",
+                barmode="group",
+                labels={"difficulty": "Fixture Difficulty", "total_points": "Avg Points"},
+                title="Average Points by Fixture Difficulty"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No gameweek data available yet.")
+    else:
+        st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
+        st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
+
