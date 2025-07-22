@@ -348,7 +348,8 @@ with tab5:
 # (Place this inside your Streamlit app code)
 # Add this as a new Tab 6: FDR Impact Analysis
 
-with st.expander("📊 Player Performance by Fixture Difficulty (FDR)", expanded=False):
+with tab6:
+    with st.expander("📊 Player Performance by Fixture Difficulty (FDR)", expanded=False):
     if has_access:
         st.subheader("📊 Avg Points by FDR")
         
