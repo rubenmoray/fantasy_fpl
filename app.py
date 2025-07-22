@@ -350,53 +350,79 @@ with tab5:
 
 
 # ==== TAB 6: FDR Impact ====
-with tab6:
-    
-    if has_access:
-        st.subheader("📊 FDR Impact Analysis")
-        st.markdown("""
-        This chart shows how player performance varies by **Fixture Difficulty Rating (FDR)**.
-        The logic assumes that lower FDRs represent easier opponents, and performance is grouped accordingly.
-        """)
+# ==== TAB 6: FDR Impact ====
+tab_titles = [
+    "📋 Player List", "🔥 Top Picks", "📈 Performance", "⚔️ Comparison", "⚽️ Set Pieces", "📊 FDR Impact"
+]
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(tab_titles)
 
-        selected_players_fdr = st.multiselect(
-            "Select players to analyze",
+with tab6:
+    if has_access:
+        st.subheader("📊 Player Output vs Fixture Difficulty (FDR)")
+
+        selected_names_fdr = st.multiselect(
+            "Select players to analyze FDR impact",
             sorted(df["Player"].dropna().unique()),
-            default=sorted(df["Player"].dropna().unique())[:3]
+            default=sorted(df["Player"].dropna().unique())[:2]
         )
 
         @st.cache_data
-        def get_history(player_id):
+        def get_player_history(player_id):
             url = f"https://fantasy.premierleague.com/api/element-summary/{int(player_id)}/"
             res = requests.get(url)
-            return pd.DataFrame(res.json()["history"]) if res.status_code == 200 else pd.DataFrame()
+            if res.status_code == 200:
+                return pd.DataFrame(res.json()["history"])
+            return pd.DataFrame()
 
-        if selected_players_fdr:
-            fdr_dfs = []
-            for name in selected_players_fdr:
-                player_id = df[df["Player"] == name]["Player ID"].values[0]
-                history = get_history(player_id)
-                if not history.empty:
-                    grouped = history.groupby("fixture_difficulty")["total_points"].mean().reset_index()
-                    grouped["Player"] = name
-                    fdr_dfs.append(grouped)
+        team_id_to_name = {
+            1: "Arsenal", 2: "Aston Villa", 3: "Bournemouth", 4: "Brentford", 5: "Brighton",
+            6: "Burnley", 7: "Chelsea", 8: "Crystal Palace", 9: "Everton", 10: "Fulham",
+            11: "Liverpool", 12: "Luton", 13: "Man City", 14: "Man Utd", 15: "Newcastle",
+            16: "Nott'm Forest", 17: "Sheffield Utd", 18: "Spurs", 19: "West Ham", 20: "Wolves"
+        }
 
-            if fdr_dfs:
-                fdr_combined = pd.concat(fdr_dfs)
-                fig = px.line(
-                    fdr_combined,
-                    x="fixture_difficulty",
-                    y="total_points",
-                    color="Player",
-                    markers=True,
-                    title="Average Points by Fixture Difficulty (FDR)"
-                )
-                fig.update_layout(xaxis_title="FDR (1 = Easy, 5 = Hard)", yaxis_title="Avg Points")
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("No data found for selected players.")
+        all_fdr_data = []
+
+        for name in selected_names_fdr:
+            player_row = df[df["Player"] == name]
+            if player_row.empty or "Player ID" not in player_row.columns:
+                st.warning(f"❌ Could not find Player ID for {name}")
+                continue
+
+            player_id = player_row["Player ID"].values[0]
+            history = get_player_history(player_id)
+
+            if history.empty:
+                st.warning(f"⚠️ No data available for {name}")
+                continue
+
+            st.markdown(f"✅ Sample data for **{name}**:")
+            st.dataframe(history.head())  # 🔍 Show first few rows of data
+
+            if "opponent_team" not in history.columns or "total_points" not in history.columns:
+                st.error("Required fields (`opponent_team`, `total_points`) not found.")
+                continue
+
+            history["Opponent"] = history["opponent_team"].map(team_id_to_name)
+            history["Player"] = name
+            all_fdr_data.append(history)
+
+        if all_fdr_data:
+            combined_fdr = pd.concat(all_fdr_data)
+
+            fig = px.scatter(
+                combined_fdr,
+                x="Opponent",
+                y="total_points",
+                color="Player",
+                size="minutes",
+                hover_data=["round"],
+                title="Total Points vs Opponent Team"
+            )
+            st.plotly_chart(fig, use_container_width=True)
         else:
-            st.info("Select at least one player to view FDR impact.")
+            st.info("No data found for selected players.")
+
     else:
         st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
         st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
