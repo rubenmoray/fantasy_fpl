@@ -14,7 +14,7 @@ st.title("📊 FPL Fantasy Tracker 2025/26 (*data still from last season*)")
 # === Load Excel ===
 @st.cache_data
 def load_data():
-    return pd.read_excel("fpl_fantasy_dashboard.xlsx")
+    return pd.read_excel("fpl_fantasy_dashboard_2025.xlsx")
 
 df = load_data()
 
