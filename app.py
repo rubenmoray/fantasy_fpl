@@ -104,8 +104,8 @@ if os.path.exists("fpl_fantasy_dashboard.xlsx"):
     last_modified = datetime.datetime.fromtimestamp(os.path.getmtime("fpl_fantasy_dashboard.xlsx"))
     st.sidebar.write(f"📅 Data updated: {last_modified.strftime('%Y-%m-%d %H:%M')}")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📋 Player List", "🔥 Top Picks", "📈 Performance", "⚔️ Comparison", "⚽️ Set Pieces"
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "📋 Player List", "🔥 Top Picks", "📈 Performance", "⚔️ Comparison", "⚽️ Set Pieces", "📊 FDR Impact"
 ])
 
 # ==== TAB 1 ====
