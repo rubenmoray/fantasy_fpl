@@ -206,144 +206,144 @@ with tab2:
 # ==== TAB 3 ====
 # ==== TAB 3: Performance ====
 with tab3:
-    if has_access:
-        st.subheader("📈 Gameweek Performance Comparison")
+    #if has_access:
+    st.subheader("📈 Gameweek Performance Comparison")
 
-        selected_names = st.multiselect(
-            "Select players to compare", 
-            sorted(df["Player"].dropna().unique()), 
-            default=sorted(df["Player"].dropna().unique())[:2]
-        )
+    selected_names = st.multiselect(
+        "Select players to compare", 
+        sorted(df["Player"].dropna().unique()), 
+        default=sorted(df["Player"].dropna().unique())[:2]
+    )
 
-        @st.cache_data
-        def get_history(player_id):
-            url = f"https://fantasy.premierleague.com/api/element-summary/{int(player_id)}/"
-            res = requests.get(url)
-            return pd.DataFrame(res.json()["history"]) if res.status_code == 200 else pd.DataFrame()
+    @st.cache_data
+    def get_history(player_id):
+        url = f"https://fantasy.premierleague.com/api/element-summary/{int(player_id)}/"
+        res = requests.get(url)
+        return pd.DataFrame(res.json()["history"]) if res.status_code == 200 else pd.DataFrame()
 
-        if len(selected_names) < 1:
-            st.info("Please select at least one player.")
-        else:
-            all_histories = []
-            for name in selected_names:
-                player_id = df[df["Player"] == name]["Player ID"].values[0]
-                history = get_history(player_id)
-                if not history.empty:
-                    history["Player"] = name
-                    all_histories.append(history)
-
-            if all_histories:
-                combined = pd.concat(all_histories)
-                fig = px.line(
-                    combined, 
-                    x="round", 
-                    y="total_points", 
-                    color="Player",
-                    markers=True,
-                    title="Points per Gameweek"
-                )
-                fig.update_layout(xaxis_title="Gameweek", yaxis_title="Points")
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("No gameweek data available yet.")
-
+    if len(selected_names) < 1:
+        st.info("Please select at least one player.")
     else:
-        st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
-        st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
+        all_histories = []
+        for name in selected_names:
+            player_id = df[df["Player"] == name]["Player ID"].values[0]
+            history = get_history(player_id)
+            if not history.empty:
+                history["Player"] = name
+                all_histories.append(history)
+
+        if all_histories:
+            combined = pd.concat(all_histories)
+            fig = px.line(
+                combined, 
+                x="round", 
+                y="total_points", 
+                color="Player",
+                markers=True,
+                title="Points per Gameweek"
+            )
+            fig.update_layout(xaxis_title="Gameweek", yaxis_title="Points")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No gameweek data available yet.")
+
+#else:
+    #st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
+    #st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
 
 # ==== TAB 4 ====
 import plotly.graph_objects as go  # Asegúrate de tener esto arriba si no está
 
 # ==== TAB 4 ====
 with tab4:
-    if has_access:
-        st.subheader("⚔️ Custom Radar Chart Comparison")
+    #if has_access:
+    st.subheader("⚔️ Custom Radar Chart Comparison")
 
-        # 1. Selección de jugadores
-        selected_players = st.multiselect(
-            "Select players to compare",
-            df["Player"].dropna().unique(),
-            default=df["Player"].dropna().unique()[:2]
-        )
-
-        # 2. Selección de métricas
-        numeric_cols = df.select_dtypes(include='number').columns.tolist()
-        available_metrics = [col for col in numeric_cols if col not in ["Player ID"]]
-
-        selected_metrics = st.multiselect(
-            "Select metrics to compare",
-            available_metrics,
-            default=["Points/Game", "expected_goals_per_90", "expected_assists_per_90", "Total Points", "Price (£m)"]
-        )
-        st.warning(
-        "⚠️ The radar charts show each stat **on a scale from 0 to 1**, so you can easily compare players even if the original numbers are very different. "
-        "If a player has no data for a selected stat, they won’t show up properly on the chart. "
-        "For best results, choose stats with consistent data and select **at least 4 players**."
+    # 1. Selección de jugadores
+    selected_players = st.multiselect(
+        "Select players to compare",
+        df["Player"].dropna().unique(),
+        default=df["Player"].dropna().unique()[:2]
     )
 
+    # 2. Selección de métricas
+    numeric_cols = df.select_dtypes(include='number').columns.tolist()
+    available_metrics = [col for col in numeric_cols if col not in ["Player ID"]]
 
-        if len(selected_players) < 2:
-            st.info("Please select at least 2 players.")
-        elif len(selected_metrics) < 2:
-            st.info("Please select at least 2 metrics.")
-        else:
-            compare_df = df[df["Player"].isin(selected_players)][["Player"] + selected_metrics].dropna()
-            compare_df.set_index("Player", inplace=True)
+    selected_metrics = st.multiselect(
+        "Select metrics to compare",
+        available_metrics,
+        default=["Points/Game", "expected_goals_per_90", "expected_assists_per_90", "Total Points", "Price (£m)"]
+    )
+    st.warning(
+    "⚠️ The radar charts show each stat **on a scale from 0 to 1**, so you can easily compare players even if the original numbers are very different. "
+    "If a player has no data for a selected stat, they won’t show up properly on the chart. "
+    "For best results, choose stats with consistent data and select **at least 4 players**."
+)
 
-            # Filtrar columnas con al menos 2 valores numéricos > 0
-            non_zero = compare_df.loc[:, (compare_df > 0).sum() >= 2]
 
-            if non_zero.shape[1] < 2 or compare_df.shape[0] < 2:
-                st.warning("Not enough valid data across players and metrics to build radar.")
-            else:
-                # Normalizar
-                norm = (non_zero - non_zero.min()) / (non_zero.max() - non_zero.min())
-                categories = norm.columns.tolist()
-
-                fig = go.Figure()
-                for player in norm.index:
-                    fig.add_trace(go.Scatterpolar(
-                        r=norm.loc[player].values,
-                        theta=categories,
-                        fill='toself',
-                        name=player,
-                        opacity=0.6
-                    ))
-
-                fig.update_layout(
-                    polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
-                    showlegend=True,
-                    title="🔄 Player Comparison Radar"
-                )
-                st.plotly_chart(fig, use_container_width=True)
-
-                # Descarga CSV
-                st.download_button(
-                    label="📥 Download Comparison Data",
-                    data=compare_df.reset_index().to_csv(index=False).encode('utf-8'),
-                    file_name="custom_player_comparison.csv",
-                    mime="text/csv"
-                )
+    if len(selected_players) < 2:
+        st.info("Please select at least 2 players.")
+    elif len(selected_metrics) < 2:
+        st.info("Please select at least 2 metrics.")
     else:
-        st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
-        st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
+        compare_df = df[df["Player"].isin(selected_players)][["Player"] + selected_metrics].dropna()
+        compare_df.set_index("Player", inplace=True)
+
+        # Filtrar columnas con al menos 2 valores numéricos > 0
+        non_zero = compare_df.loc[:, (compare_df > 0).sum() >= 2]
+
+        if non_zero.shape[1] < 2 or compare_df.shape[0] < 2:
+            st.warning("Not enough valid data across players and metrics to build radar.")
+        else:
+            # Normalizar
+            norm = (non_zero - non_zero.min()) / (non_zero.max() - non_zero.min())
+            categories = norm.columns.tolist()
+
+            fig = go.Figure()
+            for player in norm.index:
+                fig.add_trace(go.Scatterpolar(
+                    r=norm.loc[player].values,
+                    theta=categories,
+                    fill='toself',
+                    name=player,
+                    opacity=0.6
+                ))
+
+            fig.update_layout(
+                polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+                showlegend=True,
+                title="🔄 Player Comparison Radar"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Descarga CSV
+            st.download_button(
+                label="📥 Download Comparison Data",
+                data=compare_df.reset_index().to_csv(index=False).encode('utf-8'),
+                file_name="custom_player_comparison.csv",
+                mime="text/csv"
+            )
+    #else:
+        #st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
+        #st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
 
 # ==== TAB 5 ====
 with tab5:
-    if has_access:
-        st.subheader("⚽️ Set Piece Takers by Team")
-        if {"corners_and_indirect_freekicks_order", "direct_freekicks_order", "penalties_order"}.issubset(df.columns):
-            st.dataframe(
-                df[["Player", "Team", "Position",
-                    "corners_and_indirect_freekicks_order", "direct_freekicks_order", "penalties_order", "Status"]]
-                .dropna(how="all", subset=["corners_and_indirect_freekicks_order", "direct_freekicks_order", "penalties_order"])
-                .sort_values(["Team", "Position"])
-            )
-        else:
-            st.info("Set piece data not available yet.")
+    #if has_access:
+    st.subheader("⚽️ Set Piece Takers by Team")
+    if {"corners_and_indirect_freekicks_order", "direct_freekicks_order", "penalties_order"}.issubset(df.columns):
+        st.dataframe(
+            df[["Player", "Team", "Position",
+                "corners_and_indirect_freekicks_order", "direct_freekicks_order", "penalties_order", "Status"]]
+            .dropna(how="all", subset=["corners_and_indirect_freekicks_order", "direct_freekicks_order", "penalties_order"])
+            .sort_values(["Team", "Position"])
+        )
     else:
-        st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
-        st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
+        st.info("Set piece data not available yet.")
+    #else:
+       # st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
+        #st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
 
 # (Place this inside your Streamlit app code)
 # Add this as a new Tab 6: FDR Impact Analysis
@@ -352,72 +352,72 @@ with tab5:
 # ==== TAB 6: FDR Impact ====
 
 with tab6:
-    if has_access:
-        st.subheader("📊 Player Output vs Fixture Difficulty (FDR)")
+    #if has_access:
+    st.subheader("📊 Player Output vs Fixture Difficulty (FDR)")
 
-        selected_names_fdr = st.multiselect(
-            "Select players to analyze FDR impact",
-            sorted(df["Player"].dropna().unique()),
-            default=sorted(df["Player"].dropna().unique())[:2]
+    selected_names_fdr = st.multiselect(
+        "Select players to analyze FDR impact",
+        sorted(df["Player"].dropna().unique()),
+        default=sorted(df["Player"].dropna().unique())[:2]
+    )
+
+    @st.cache_data
+    def get_player_history(player_id):
+        url = f"https://fantasy.premierleague.com/api/element-summary/{int(player_id)}/"
+        res = requests.get(url)
+        if res.status_code == 200:
+            return pd.DataFrame(res.json()["history"])
+        return pd.DataFrame()
+
+    team_id_to_name = {
+        1: "Arsenal", 2: "Aston Villa", 3: "Bournemouth", 4: "Brentford", 5: "Brighton",
+        6: "Burnley", 7: "Chelsea", 8: "Crystal Palace", 9: "Everton", 10: "Fulham",
+        11: "Liverpool", 12: "Luton", 13: "Man City", 14: "Man Utd", 15: "Newcastle",
+        16: "Nott'm Forest", 17: "Sheffield Utd", 18: "Spurs", 19: "West Ham", 20: "Wolves"
+    }
+
+    all_fdr_data = []
+
+    for name in selected_names_fdr:
+        player_row = df[df["Player"] == name]
+        if player_row.empty or "Player ID" not in player_row.columns:
+            st.warning(f"❌ Could not find Player ID for {name}")
+            continue
+
+        player_id = player_row["Player ID"].values[0]
+        history = get_player_history(player_id)
+
+        if history.empty:
+            st.warning(f"⚠️ No data available for {name}")
+            continue
+
+        st.markdown(f"✅ Sample data for **{name}**:")
+        st.dataframe(history.head())  # 🔍 Show first few rows of data
+
+        if "opponent_team" not in history.columns or "total_points" not in history.columns:
+            st.error("Required fields (`opponent_team`, `total_points`) not found.")
+            continue
+
+        history["Opponent"] = history["opponent_team"].map(team_id_to_name)
+        history["Player"] = name
+        all_fdr_data.append(history)
+
+    if all_fdr_data:
+        combined_fdr = pd.concat(all_fdr_data)
+
+        fig = px.scatter(
+            combined_fdr,
+            x="Opponent",
+            y="total_points",
+            color="Player",
+            size="minutes",
+            hover_data=["round"],
+            title="Total Points vs Opponent Team"
         )
-
-        @st.cache_data
-        def get_player_history(player_id):
-            url = f"https://fantasy.premierleague.com/api/element-summary/{int(player_id)}/"
-            res = requests.get(url)
-            if res.status_code == 200:
-                return pd.DataFrame(res.json()["history"])
-            return pd.DataFrame()
-
-        team_id_to_name = {
-            1: "Arsenal", 2: "Aston Villa", 3: "Bournemouth", 4: "Brentford", 5: "Brighton",
-            6: "Burnley", 7: "Chelsea", 8: "Crystal Palace", 9: "Everton", 10: "Fulham",
-            11: "Liverpool", 12: "Luton", 13: "Man City", 14: "Man Utd", 15: "Newcastle",
-            16: "Nott'm Forest", 17: "Sheffield Utd", 18: "Spurs", 19: "West Ham", 20: "Wolves"
-        }
-
-        all_fdr_data = []
-
-        for name in selected_names_fdr:
-            player_row = df[df["Player"] == name]
-            if player_row.empty or "Player ID" not in player_row.columns:
-                st.warning(f"❌ Could not find Player ID for {name}")
-                continue
-
-            player_id = player_row["Player ID"].values[0]
-            history = get_player_history(player_id)
-
-            if history.empty:
-                st.warning(f"⚠️ No data available for {name}")
-                continue
-
-            st.markdown(f"✅ Sample data for **{name}**:")
-            st.dataframe(history.head())  # 🔍 Show first few rows of data
-
-            if "opponent_team" not in history.columns or "total_points" not in history.columns:
-                st.error("Required fields (`opponent_team`, `total_points`) not found.")
-                continue
-
-            history["Opponent"] = history["opponent_team"].map(team_id_to_name)
-            history["Player"] = name
-            all_fdr_data.append(history)
-
-        if all_fdr_data:
-            combined_fdr = pd.concat(all_fdr_data)
-
-            fig = px.scatter(
-                combined_fdr,
-                x="Opponent",
-                y="total_points",
-                color="Player",
-                size="minutes",
-                hover_data=["round"],
-                title="Total Points vs Opponent Team"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No data found for selected players.")
-
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
-        st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
+        st.info("No data found for selected players.")
+
+    #else:
+        #st.warning("🔐 Premium feature. Enter access code in sidebar to unlock.")
+        #st.markdown("👉 [Buy your access code on Gumroad](https://moray5.gumroad.com/l/rejrzq?wanted=true)")
