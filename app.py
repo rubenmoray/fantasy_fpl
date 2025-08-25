@@ -68,10 +68,10 @@ df = compute_value_scores(df)
 
 
 # === Premium Access ===
-st.sidebar.markdown("---")
-st.sidebar.subheader("🔐 Premium Access")
-access_code = st.sidebar.text_input("Enter access code", type="password")
-has_access = access_code == "FPL2025-PRO-ACCESS"
+# st.sidebar.markdown("---")
+# st.sidebar.subheader("🔐 Premium Access")
+# access_code = st.sidebar.text_input("Enter access code", type="password")
+# has_access = access_code == "FPL2025-PRO-ACCESS"
 
 # ==== Alertas visuales de status ====
 def status_emoji(status):
